@@ -9,6 +9,7 @@ from PIL import Image
 
 from .api import generate
 from .image_ops import to_color
+from .text_ops import split_like_antiocr
 
 
 class AntiOcrCompat:
@@ -58,6 +59,32 @@ class AntiOcrCompat:
             output_options={"background_image": _load_bg_image(bg_image)} if bg_image is not None else None,
         )
         return output.image
+
+    @classmethod
+    def split(cls, texts: str) -> list[dict]:
+        return split_like_antiocr(texts)
+
+    @classmethod
+    def transform(cls, texts: list[dict], char_to_pinyin_ratio: float, char_reverse_ratio: float) -> list[dict]:
+        import random
+        from pypinyin import lazy_pinyin
+
+        outs: list[dict] = []
+        for info in texts:
+            chunk = info.get("char", "")
+            chunk_type = info.get("type", "cn")
+            reverse = False
+            if random.random() < char_to_pinyin_ratio:
+                chunk = "".join(lazy_pinyin(chunk))
+                chunk_type = "pinyin"
+            elif chunk_type == "cn":
+                reverse = random.random() < char_reverse_ratio
+            outs.append({"char": chunk, "type": chunk_type, "reverse": reverse})
+        return outs
+
+
+class AntiOcr(AntiOcrCompat):
+    """Alias to simplify migration from antiocr.AntiOcr."""
 
 
 def _load_bg_image(bg_image: Union[str, Path, Image.Image]) -> Image.Image:
