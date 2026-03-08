@@ -47,9 +47,10 @@ def generate_cmd(text, text_file, config_path, preset, seed, output, output_form
 @click.option("--config", "config_path", type=click.Path(exists=True, path_type=Path), default=None)
 @click.option("--preset", type=str, default=None)
 @click.option("--base-seed", type=int, default=None)
+@click.option("--seed-strategy", type=click.Choice(["incremental", "random"]), default="incremental")
 @click.option("--output-dir", type=click.Path(path_type=Path), default=Path("outputs"))
 @click.option("--format", "output_format", type=click.Choice(["PNG", "JPEG", "WEBP"]), default="PNG")
-def batch_cmd(input_file, config_path, preset, base_seed, output_dir, output_format):
+def batch_cmd(input_file, config_path, preset, base_seed, seed_strategy, output_dir, output_format):
     """Generate images in batch."""
 
     result = generate_batch(
@@ -57,6 +58,7 @@ def batch_cmd(input_file, config_path, preset, base_seed, output_dir, output_for
         preset=preset,
         config_path=config_path,
         base_seed=base_seed,
+        seed_strategy=seed_strategy,
         output_dir=output_dir,
         output_format=output_format,
     )
@@ -71,7 +73,8 @@ def batch_cmd(input_file, config_path, preset, base_seed, output_dir, output_for
 @cli.command("eval")
 @click.option("--manifest", type=click.Path(exists=True, path_type=Path), required=True)
 @click.option("--backend", "backends", multiple=True, default=("tesseract",))
-def eval_cmd(manifest, backends):
+@click.option("--report", type=click.Path(path_type=Path), default=None)
+def eval_cmd(manifest, backends, report_path_opt):
     """Evaluate OCR CER from a manifest jsonl."""
 
     images: list[Path] = []
@@ -84,8 +87,26 @@ def eval_cmd(manifest, backends):
                 continue
             images.append(Path(output_path))
             texts.append(item.get("text", ""))
-    report = evaluate(images, texts, backends=list(backends))
-    click.echo(json.dumps({"avg_cer": report.avg_cer, "sample_count": len(report.samples)}, ensure_ascii=False))
+    eval_report = evaluate(images, texts, backends=list(backends))
+    payload = {
+        "avg_cer": eval_report.avg_cer,
+        "sample_count": len(eval_report.samples),
+        "samples": [
+            {
+                "sample_id": item.sample_id,
+                "ground_truth": item.ground_truth,
+                "recognized": item.recognized,
+                "cer": item.cer,
+            }
+            for item in eval_report.samples
+        ],
+    }
+    if report_path_opt is not None:
+        report_path = Path(report_path_opt).expanduser().resolve()
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        payload["report_path"] = str(report_path)
+    click.echo(json.dumps(payload, ensure_ascii=False))
 
 
 @cli.group("preset")
