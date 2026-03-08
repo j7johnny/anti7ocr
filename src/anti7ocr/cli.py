@@ -1,0 +1,105 @@
+"""Command line interface."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import click
+
+from .api import evaluate, generate, generate_batch
+from .presets import build_preset, preset_names
+
+
+@click.group()
+def cli():
+    """anti7ocr CLI."""
+
+
+@cli.command("generate")
+@click.option("--text", type=str, default=None, help="Input text.")
+@click.option("--text-file", type=click.Path(exists=True, path_type=Path), default=None)
+@click.option("--config", "config_path", type=click.Path(exists=True, path_type=Path), default=None)
+@click.option("--preset", type=str, default=None)
+@click.option("--seed", type=int, default=None)
+@click.option("--output", type=click.Path(path_type=Path), required=True)
+@click.option("--format", "output_format", type=click.Choice(["PNG", "JPEG", "WEBP"]), default="PNG")
+def generate_cmd(text, text_file, config_path, preset, seed, output, output_format):
+    """Generate a single image."""
+
+    if not text and not text_file:
+        raise click.UsageError("Either --text or --text-file must be provided.")
+    if text_file:
+        text = text_file.read_text(encoding="utf-8")
+    result = generate(
+        text=text,
+        preset=preset,
+        config_path=config_path,
+        seed=seed,
+        output_options={"path": output, "format": output_format},
+    )
+    click.echo(json.dumps({"seed": result.seed, "output_path": str(result.output_path)}, ensure_ascii=False))
+
+
+@cli.command("batch")
+@click.option("--input-file", type=click.Path(exists=True, path_type=Path), required=True)
+@click.option("--config", "config_path", type=click.Path(exists=True, path_type=Path), default=None)
+@click.option("--preset", type=str, default=None)
+@click.option("--base-seed", type=int, default=None)
+@click.option("--output-dir", type=click.Path(path_type=Path), default=Path("outputs"))
+@click.option("--format", "output_format", type=click.Choice(["PNG", "JPEG", "WEBP"]), default="PNG")
+def batch_cmd(input_file, config_path, preset, base_seed, output_dir, output_format):
+    """Generate images in batch."""
+
+    result = generate_batch(
+        input_source=input_file,
+        preset=preset,
+        config_path=config_path,
+        base_seed=base_seed,
+        output_dir=output_dir,
+        output_format=output_format,
+    )
+    click.echo(
+        json.dumps(
+            {"items": len(result.items), "manifest_path": str(result.manifest_path)},
+            ensure_ascii=False,
+        )
+    )
+
+
+@cli.command("eval")
+@click.option("--manifest", type=click.Path(exists=True, path_type=Path), required=True)
+@click.option("--backend", "backends", multiple=True, default=("tesseract",))
+def eval_cmd(manifest, backends):
+    """Evaluate OCR CER from a manifest jsonl."""
+
+    images: list[Path] = []
+    texts: list[str] = []
+    with manifest.open("r", encoding="utf-8") as file:
+        for line in file:
+            item = json.loads(line)
+            output_path = item.get("output_path")
+            if not output_path:
+                continue
+            images.append(Path(output_path))
+            texts.append(item.get("text", ""))
+    report = evaluate(images, texts, backends=list(backends))
+    click.echo(json.dumps({"avg_cer": report.avg_cer, "sample_count": len(report.samples)}, ensure_ascii=False))
+
+
+@cli.group("preset")
+def preset_group():
+    """Inspect built-in presets."""
+
+
+@preset_group.command("list")
+def preset_list():
+    click.echo(json.dumps({"presets": preset_names()}, ensure_ascii=False))
+
+
+@preset_group.command("show")
+@click.argument("name")
+def preset_show(name):
+    config = build_preset(name)
+    click.echo(json.dumps(config, ensure_ascii=False, indent=2))
+
