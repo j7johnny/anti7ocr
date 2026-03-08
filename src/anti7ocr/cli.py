@@ -8,6 +8,7 @@ from pathlib import Path
 import click
 
 from .api import evaluate, generate, generate_batch
+from .font_manager import FontManager
 from .presets import build_preset, preset_names
 
 
@@ -103,3 +104,15 @@ def preset_show(name):
     config = build_preset(name)
     click.echo(json.dumps(config, ensure_ascii=False, indent=2))
 
+
+@cli.command("font-check")
+@click.option("--text", type=str, required=True)
+@click.option("--font-path", "font_paths", multiple=True)
+@click.option("--font-dir", "font_dirs", multiple=True)
+@click.option("--size", type=int, default=24)
+def font_check_cmd(text, font_paths, font_dirs, size):
+    """Check glyph coverage for text against configured fonts."""
+
+    manager = FontManager(paths=font_paths, directories=font_dirs, fallback_to_default=True)
+    report = manager.inspect_text_coverage(text, size=size)
+    click.echo(json.dumps(report, ensure_ascii=False))

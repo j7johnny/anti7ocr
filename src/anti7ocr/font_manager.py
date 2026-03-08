@@ -34,6 +34,19 @@ class FontManager:
     def has_fonts(self) -> bool:
         return bool(self.font_paths)
 
+    def available_fonts(self) -> list[Path]:
+        return list(self.font_paths)
+
+    def inspect_text_coverage(self, text: str, size: int) -> dict:
+        missing: dict[str, str] = {}
+        for char in text:
+            if char == "\n":
+                continue
+            if self._supports_char(char, size):
+                continue
+            missing[char] = "missing_glyph"
+        return {"missing_chars": sorted(set(missing.keys())), "count": len(set(missing.keys()))}
+
     def get_font(self, char: str, size: int):
         for path in self.font_paths:
             try:
@@ -48,6 +61,18 @@ class FontManager:
             except TypeError:
                 return ImageFont.load_default()
         raise RuntimeError(f"No available font supports char {char!r}")
+
+    def _supports_char(self, char: str, size: int) -> bool:
+        if not self.font_paths and self.fallback_to_default:
+            return True
+        for path in self.font_paths:
+            try:
+                font = ImageFont.truetype(str(path), size)
+            except OSError:
+                continue
+            if _font_supports_char(font, char):
+                return True
+        return False
 
 
 def _font_supports_char(font, char: str) -> bool:
