@@ -11,6 +11,8 @@ def test_cli_preset_list():
     assert result.exit_code == 0
     payload = json.loads(result.output.strip())
     assert "tw_readable" in payload["presets"]
+    assert "tw_balanced" in payload["presets"]
+    assert "tw_hardened" in payload["presets"]
 
 
 def test_cli_generate_and_batch(tmp_path):

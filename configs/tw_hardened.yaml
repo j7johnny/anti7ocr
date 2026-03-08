@@ -1,0 +1,71 @@
+text:
+  unicode_normalization: NFC
+  enable_char_to_pinyin: true
+  char_to_pinyin_ratio: 0.18
+  enable_char_reverse: true
+  char_reverse_ratio: 0.20
+  reverse_rotation_range: [165, 195]
+
+canvas:
+  width: 1280
+  height: 720
+  margin: 24
+  background_color: [255, 255, 255]
+  text_color: [20, 20, 20]
+  supersample: 2
+  dpi: 96
+
+layout:
+  max_chars_per_line: 34
+  line_height_multiplier: 1.35
+  micro_kerning_jitter: 2.2
+  baseline_jitter: 2.2
+  character_scale_jitter: 0.14
+
+font:
+  paths: []
+  directories: []
+  fallback_to_default: true
+  min_size: 26
+  max_size: 44
+
+background:
+  enable: true
+  density: 0.22
+  min_font_size: 10
+  max_font_size: 26
+  foreground: [125, 125, 125]
+
+fragment:
+  enable: true
+  stroke_fragmentation_prob: 0.40
+  closed_structure_break_prob: 0.44
+  closed_structure_chars: "口日目田國囗回園圖器品問間門閩"
+  erase_width: 2
+  erase_ratio: 0.10
+  max_stroke_fragments: 3
+  max_closed_breaks: 2
+
+perturb:
+  enable: true
+  edge_jitter_strength: 0.15
+  edge_brightness_noise: 30
+  local_contrast_noise: 0.30
+  local_contrast_patches: 24
+  adversarial_watermark_enable: true
+  watermark_text: anti7ocr
+  watermark_opacity: 34
+  watermark_density: 0.22
+  watermark_scale: 0.75
+
+export:
+  format: PNG
+  quality: 95
+
+sensitive_check:
+  enable: false
+  backend: tesseract
+  keywords: []
+  case_sensitive: true
+  mode: warn
+  max_attempts: 1

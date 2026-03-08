@@ -94,6 +94,27 @@ PRESETS: dict[str, dict] = {
             "watermark_opacity": 16,
         },
     },
+    "tw_balanced": {
+        "text": {"char_to_pinyin_ratio": 0.10, "char_reverse_ratio": 0.12},
+        "layout": {
+            "micro_kerning_jitter": 1.5,
+            "baseline_jitter": 1.6,
+            "character_scale_jitter": 0.10,
+        },
+        "fragment": {
+            "stroke_fragmentation_prob": 0.24,
+            "closed_structure_break_prob": 0.26,
+            "max_stroke_fragments": 2,
+            "max_closed_breaks": 1,
+        },
+        "perturb": {
+            "edge_jitter_strength": 0.08,
+            "edge_brightness_noise": 14,
+            "local_contrast_noise": 0.16,
+            "local_contrast_patches": 20,
+            "watermark_opacity": 20,
+        },
+    },
     "tw_aggressive": {
         "text": {"char_to_pinyin_ratio": 0.14, "char_reverse_ratio": 0.16},
         "fragment": {"stroke_fragmentation_prob": 0.35, "closed_structure_break_prob": 0.36},
@@ -102,6 +123,31 @@ PRESETS: dict[str, dict] = {
             "edge_brightness_noise": 26,
             "local_contrast_noise": 0.25,
             "watermark_opacity": 28,
+        },
+    },
+    "tw_hardened": {
+        "text": {"char_to_pinyin_ratio": 0.18, "char_reverse_ratio": 0.20},
+        "layout": {
+            "micro_kerning_jitter": 2.2,
+            "baseline_jitter": 2.2,
+            "character_scale_jitter": 0.14,
+        },
+        "background": {"density": 0.22},
+        "fragment": {
+            "stroke_fragmentation_prob": 0.40,
+            "closed_structure_break_prob": 0.44,
+            "erase_ratio": 0.10,
+            "max_stroke_fragments": 3,
+            "max_closed_breaks": 2,
+        },
+        "perturb": {
+            "edge_jitter_strength": 0.15,
+            "edge_brightness_noise": 30,
+            "local_contrast_noise": 0.30,
+            "local_contrast_patches": 24,
+            "watermark_opacity": 34,
+            "watermark_density": 0.22,
+            "watermark_scale": 0.75,
         },
     },
 }

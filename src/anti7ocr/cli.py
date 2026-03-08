@@ -65,7 +65,7 @@ def generate_cmd(
         seed=seed,
         output_options={"path": output, "format": output_format},
     )
-    click.echo(json.dumps({"seed": result.seed, "output_path": str(result.output_path)}, ensure_ascii=False))
+    _echo_json({"seed": result.seed, "output_path": str(result.output_path)})
 
 
 @cli.command("batch")
@@ -115,9 +115,8 @@ def batch_cmd(
         output_format=output_format,
     )
     click.echo(
-        json.dumps(
+        _as_json(
             {"items": len(result.items), "manifest_path": str(result.manifest_path)},
-            ensure_ascii=False,
         )
     )
 
@@ -159,7 +158,7 @@ def eval_cmd(manifest, backends, report_path_opt):
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         payload["report_path"] = str(report_path)
-    click.echo(json.dumps(payload, ensure_ascii=False))
+    _echo_json(payload)
 
 
 @cli.group("preset")
@@ -169,14 +168,14 @@ def preset_group():
 
 @preset_group.command("list")
 def preset_list():
-    click.echo(json.dumps({"presets": preset_names()}, ensure_ascii=False))
+    _echo_json({"presets": preset_names()})
 
 
 @preset_group.command("show")
 @click.argument("name")
 def preset_show(name):
     config = build_preset(name)
-    click.echo(json.dumps(config, ensure_ascii=False, indent=2))
+    _echo_json(config, indent=2)
 
 
 @cli.command("font-check")
@@ -189,7 +188,7 @@ def font_check_cmd(text, font_paths, font_dirs, size):
 
     manager = FontManager(paths=font_paths, directories=font_dirs, fallback_to_default=True)
     report = manager.inspect_text_coverage(text, size=size)
-    click.echo(json.dumps(report, ensure_ascii=False))
+    _echo_json(report)
 
 
 def _build_sensitive_override(*, enable, keywords, mode, max_attempts, backend):
@@ -216,3 +215,15 @@ def _build_sensitive_override(*, enable, keywords, mode, max_attempts, backend):
     if backend is not None:
         cfg["sensitive_check"]["backend"] = str(backend)
     return cfg
+
+
+def _as_json(payload, *, indent=None):
+    return json.dumps(payload, ensure_ascii=False, indent=indent)
+
+
+def _echo_json(payload, *, indent=None):
+    text = _as_json(payload, indent=indent)
+    try:
+        click.echo(text)
+    except UnicodeEncodeError:
+        click.echo(json.dumps(payload, ensure_ascii=True, indent=indent))

@@ -7,6 +7,14 @@
 - 同時顯著提高 OCR 辨識難度。
 - 保留原始 `antiOCR` 核心能力，並提供更可重現、可評估、可擴充的架構。
 
+## 文件中心（正體中文）
+
+- 文件入口：[docs/README.zh-TW.md](docs/README.zh-TW.md)
+- 快速開始：[docs/quickstart.zh-TW.md](docs/quickstart.zh-TW.md)
+- 預設參數指南：[docs/preset-guide.zh-TW.md](docs/preset-guide.zh-TW.md)
+- 測試與部署：[docs/testing-and-deploy.zh-TW.md](docs/testing-and-deploy.zh-TW.md)
+- 後續強化方向：[docs/roadmap.zh-TW.md](docs/roadmap.zh-TW.md)
+
 ## Features
 
 ### 1) 與 antiOCR 功能相容的核心能力
@@ -39,7 +47,7 @@
 
 ### 4) 可重現性與配置
 - YAML config
-- 內建 preset（`tw_readable` / `tw_aggressive`）
+- 內建 preset（`tw_readable` / `tw_balanced` / `tw_aggressive` / `tw_hardened`）
 - seed 控制可重現
 - 覆寫優先序：`CLI > YAML > preset > default`
 
@@ -185,7 +193,7 @@ print(report.avg_cer)
 
 ## 配置範例（重點欄位）
 
-`configs/tw_readable.yaml` 與 `configs/tw_aggressive.yaml` 已提供完整範本。
+`configs/tw_readable.yaml`、`configs/tw_balanced.yaml`、`configs/tw_aggressive.yaml`、`configs/tw_hardened.yaml` 已提供完整範本。
 
 敏感詞檢查區塊：
 
@@ -224,6 +232,12 @@ sensitive_check:
 python -m venv .venv-deploy
 & .\.venv-deploy\Scripts\python.exe -m pip install dist/anti7ocr-0.1.0-py3-none-any.whl
 & .\.venv-deploy\Scripts\anti7ocr.exe preset list
+```
+
+也可直接執行一鍵 smoke：
+
+```powershell
+& .\scripts\deploy_smoke.ps1
 ```
 
 ## Acknowledgements
