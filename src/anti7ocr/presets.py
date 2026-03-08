@@ -72,6 +72,14 @@ DEFAULT_CONFIG: dict = {
         "format": "PNG",
         "quality": 95,
     },
+    "sensitive_check": {
+        "enable": False,
+        "backend": "tesseract",
+        "keywords": [],
+        "case_sensitive": True,
+        "mode": "warn",
+        "max_attempts": 1,
+    },
 }
 
 

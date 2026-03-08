@@ -25,15 +25,41 @@ def cli():
 @click.option("--seed", type=int, default=None)
 @click.option("--output", type=click.Path(path_type=Path), required=True)
 @click.option("--format", "output_format", type=click.Choice(["PNG", "JPEG", "WEBP"]), default="PNG")
-def generate_cmd(text, text_file, config_path, preset, seed, output, output_format):
+@click.option("--sensitive-check/--no-sensitive-check", default=None)
+@click.option("--sensitive-keyword", "sensitive_keywords", multiple=True)
+@click.option("--sensitive-mode", type=click.Choice(["warn", "retry"]), default=None)
+@click.option("--sensitive-max-attempts", type=int, default=None)
+@click.option("--sensitive-backend", type=str, default=None)
+def generate_cmd(
+    text,
+    text_file,
+    config_path,
+    preset,
+    seed,
+    output,
+    output_format,
+    sensitive_check,
+    sensitive_keywords,
+    sensitive_mode,
+    sensitive_max_attempts,
+    sensitive_backend,
+):
     """Generate a single image."""
 
     if not text and not text_file:
         raise click.UsageError("Either --text or --text-file must be provided.")
     if text_file:
         text = text_file.read_text(encoding="utf-8")
+    config_override = _build_sensitive_override(
+        enable=sensitive_check,
+        keywords=sensitive_keywords,
+        mode=sensitive_mode,
+        max_attempts=sensitive_max_attempts,
+        backend=sensitive_backend,
+    )
     result = generate(
         text=text,
+        config=config_override,
         preset=preset,
         config_path=config_path,
         seed=seed,
@@ -50,11 +76,37 @@ def generate_cmd(text, text_file, config_path, preset, seed, output, output_form
 @click.option("--seed-strategy", type=click.Choice(["incremental", "random"]), default="incremental")
 @click.option("--output-dir", type=click.Path(path_type=Path), default=Path("outputs"))
 @click.option("--format", "output_format", type=click.Choice(["PNG", "JPEG", "WEBP"]), default="PNG")
-def batch_cmd(input_file, config_path, preset, base_seed, seed_strategy, output_dir, output_format):
+@click.option("--sensitive-check/--no-sensitive-check", default=None)
+@click.option("--sensitive-keyword", "sensitive_keywords", multiple=True)
+@click.option("--sensitive-mode", type=click.Choice(["warn", "retry"]), default=None)
+@click.option("--sensitive-max-attempts", type=int, default=None)
+@click.option("--sensitive-backend", type=str, default=None)
+def batch_cmd(
+    input_file,
+    config_path,
+    preset,
+    base_seed,
+    seed_strategy,
+    output_dir,
+    output_format,
+    sensitive_check,
+    sensitive_keywords,
+    sensitive_mode,
+    sensitive_max_attempts,
+    sensitive_backend,
+):
     """Generate images in batch."""
 
+    config_override = _build_sensitive_override(
+        enable=sensitive_check,
+        keywords=sensitive_keywords,
+        mode=sensitive_mode,
+        max_attempts=sensitive_max_attempts,
+        backend=sensitive_backend,
+    )
     result = generate_batch(
         input_source=input_file,
+        config=config_override,
         preset=preset,
         config_path=config_path,
         base_seed=base_seed,
@@ -73,7 +125,7 @@ def batch_cmd(input_file, config_path, preset, base_seed, seed_strategy, output_
 @cli.command("eval")
 @click.option("--manifest", type=click.Path(exists=True, path_type=Path), required=True)
 @click.option("--backend", "backends", multiple=True, default=("tesseract",))
-@click.option("--report", type=click.Path(path_type=Path), default=None)
+@click.option("--report", "report_path_opt", type=click.Path(path_type=Path), default=None)
 def eval_cmd(manifest, backends, report_path_opt):
     """Evaluate OCR CER from a manifest jsonl."""
 
@@ -138,3 +190,29 @@ def font_check_cmd(text, font_paths, font_dirs, size):
     manager = FontManager(paths=font_paths, directories=font_dirs, fallback_to_default=True)
     report = manager.inspect_text_coverage(text, size=size)
     click.echo(json.dumps(report, ensure_ascii=False))
+
+
+def _build_sensitive_override(*, enable, keywords, mode, max_attempts, backend):
+    has_override = any(
+        [
+            enable is not None,
+            bool(keywords),
+            mode is not None,
+            max_attempts is not None,
+            backend is not None,
+        ]
+    )
+    if not has_override:
+        return {}
+    cfg = {"sensitive_check": {}}
+    if enable is not None:
+        cfg["sensitive_check"]["enable"] = bool(enable)
+    if keywords:
+        cfg["sensitive_check"]["keywords"] = [str(item) for item in keywords]
+    if mode is not None:
+        cfg["sensitive_check"]["mode"] = str(mode)
+    if max_attempts is not None:
+        cfg["sensitive_check"]["max_attempts"] = int(max_attempts)
+    if backend is not None:
+        cfg["sensitive_check"]["backend"] = str(backend)
+    return cfg

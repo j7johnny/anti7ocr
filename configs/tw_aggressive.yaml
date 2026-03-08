@@ -61,3 +61,11 @@ perturb:
 export:
   format: PNG
   quality: 95
+
+sensitive_check:
+  enable: false
+  backend: tesseract
+  keywords: []
+  case_sensitive: true
+  mode: warn
+  max_attempts: 1

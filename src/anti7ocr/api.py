@@ -14,6 +14,7 @@ from .evaluation import evaluate_images
 from .models import BatchItemResult, BatchResult, EvalReport, GenerationResult
 from .pipeline import PipelineEngine
 from .pipeline.context import PipelineContext
+from .sensitive import run_sensitive_check
 
 
 def generate(
@@ -28,34 +29,58 @@ def generate(
     """Generate one anti-OCR image."""
 
     runtime_seed = seed if seed is not None else random.SystemRandom().randint(1, 2**31 - 1)
-    py_rng = random.Random(runtime_seed)
-    np_rng = np.random.default_rng(runtime_seed)
-
     override_cfg = dict(config or {})
     if output_options:
         export_cfg = override_cfg.setdefault("export", {})
         if "format" in output_options:
             export_cfg["format"] = output_options["format"]
-
     resolved = resolve_config(preset=preset, yaml_path=config_path, overrides=override_cfg)
-    ctx = PipelineContext(
-        text=text,
-        config=resolved,
-        py_rng=py_rng,
-        np_rng=np_rng,
-        seed=runtime_seed,
-        metadata={},
-    )
-    if output_options and "path" in output_options:
-        ctx.metadata["output_path"] = str(output_options["path"])
-    if output_options and "background_image" in output_options:
-        ctx.metadata["background_image"] = output_options["background_image"]
-    if output_options and "evaluate_callback" in output_options:
-        ctx.metadata["evaluate_callback"] = output_options["evaluate_callback"]
+    sensitive_cfg = resolved.get("sensitive_check", {})
+    mode = str(sensitive_cfg.get("mode", "warn")).lower()
+    max_attempts = max(1, int(sensitive_cfg.get("max_attempts", 1)))
+    if mode not in {"warn", "retry"}:
+        raise ValueError("sensitive_check.mode must be one of: warn, retry")
 
-    final_ctx = PipelineEngine().run(ctx)
-    if final_ctx.image is None:
+    final_ctx = None
+    last_sensitive_result = None
+    for attempt in range(max_attempts):
+        attempt_seed = runtime_seed + attempt
+        py_rng = random.Random(attempt_seed)
+        np_rng = np.random.default_rng(attempt_seed)
+        ctx = PipelineContext(
+            text=text,
+            config=resolved,
+            py_rng=py_rng,
+            np_rng=np_rng,
+            seed=attempt_seed,
+            metadata={"attempt": attempt + 1},
+        )
+        if output_options and "path" in output_options:
+            ctx.metadata["output_path"] = str(output_options["path"])
+        if output_options and "background_image" in output_options:
+            ctx.metadata["background_image"] = output_options["background_image"]
+        if output_options and "evaluate_callback" in output_options:
+            ctx.metadata["evaluate_callback"] = output_options["evaluate_callback"]
+
+        final_ctx = PipelineEngine().run(ctx)
+        if final_ctx.image is None:
+            raise RuntimeError("Pipeline did not produce an image")
+
+        last_sensitive_result = run_sensitive_check(final_ctx.image, sensitive_cfg)
+        final_ctx.metadata["sensitive_check"] = last_sensitive_result
+        if not last_sensitive_result.get("enabled", False):
+            break
+        if not last_sensitive_result.get("detected", False):
+            break
+        if mode == "warn":
+            break
+
+    if final_ctx is None or final_ctx.image is None:
         raise RuntimeError("Pipeline did not produce an image")
+    final_ctx.metadata["attempt_count"] = int(final_ctx.metadata.get("attempt", 1))
+    if last_sensitive_result is not None:
+        final_ctx.metadata["sensitive_check"] = last_sensitive_result
+
     output_path = Path(final_ctx.metadata["saved_path"]) if "saved_path" in final_ctx.metadata else None
     return GenerationResult(
         image=final_ctx.image,
@@ -150,7 +175,7 @@ def _read_texts(source: list[str] | str | Path) -> list[str]:
     texts: list[str] = []
     with path.open("r", encoding="utf-8") as file:
         for line in file:
-            line = line.rstrip("\n")
+            line = line.rstrip("\n").lstrip("\ufeff")
             if line.strip():
                 texts.append(line)
     return texts
