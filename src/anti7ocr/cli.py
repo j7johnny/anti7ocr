@@ -97,6 +97,7 @@ def eval_cmd(manifest, backends, report_path_opt):
                 "ground_truth": item.ground_truth,
                 "recognized": item.recognized,
                 "cer": item.cer,
+                "errors": item.errors,
             }
             for item in eval_report.samples
         ],

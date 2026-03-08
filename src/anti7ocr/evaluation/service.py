@@ -32,12 +32,15 @@ def evaluate_images(
         image = _to_image(image_obj)
         recognized: dict[str, str] = {}
         cer_scores: dict[str, float] = {}
+        errors: dict[str, str] = {}
         for backend in backend_instances:
             try:
                 predicted = backend.recognize(image)
+                score = cer(gt, predicted)
             except Exception as exc:
-                predicted = f"[ERROR] {exc}"
-            score = cer(gt, predicted)
+                predicted = ""
+                score = 1.0
+                errors[backend.name] = str(exc)
             recognized[backend.name] = predicted
             cer_scores[backend.name] = score
             aggregate[backend.name].append(score)
@@ -47,6 +50,7 @@ def evaluate_images(
                 ground_truth=gt,
                 recognized=recognized,
                 cer=cer_scores,
+                errors=errors,
             )
         )
 
@@ -61,4 +65,3 @@ def _to_image(value: Image.Image | str | Path) -> Image.Image:
     if isinstance(value, Image.Image):
         return value.convert("RGB")
     return Image.open(Path(value)).convert("RGB")
-

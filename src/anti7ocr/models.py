@@ -86,6 +86,7 @@ class EvalSampleResult:
     ground_truth: str
     recognized: dict[str, str]
     cer: dict[str, float]
+    errors: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -94,4 +95,3 @@ class EvalReport:
 
     samples: list[EvalSampleResult]
     avg_cer: dict[str, float]
-
