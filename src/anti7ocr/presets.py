@@ -50,8 +50,11 @@ DEFAULT_CONFIG: dict = {
         "enable": True,
         "stroke_fragmentation_prob": 0.28,
         "closed_structure_break_prob": 0.30,
+        "closed_structure_chars": "口日目田國囗回園圖器品問間門閩",
         "erase_width": 2,
         "erase_ratio": 0.08,
+        "max_stroke_fragments": 2,
+        "max_closed_breaks": 1,
     },
     "perturb": {
         "enable": True,
@@ -115,4 +118,3 @@ def _deep_merge(base: dict, override: dict) -> dict:
         else:
             base[key] = value
     return base
-
