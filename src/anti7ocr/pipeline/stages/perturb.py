@@ -59,6 +59,13 @@ def _apply_edge_noise(image: Image.Image, np_rng, jitter_strength: float, bright
     gray = np.array(image.convert("L").filter(ImageFilter.FIND_EDGES))
     mask = gray > np.percentile(gray, 70)
     if jitter_strength > 0:
+        shift_x = int(np.clip(np_rng.normal(0, 2.0 * jitter_strength * 10), -3, 3))
+        shift_y = int(np.clip(np_rng.normal(0, 2.0 * jitter_strength * 10), -3, 3))
+        rolled = np.roll(rgba[:, :, :3], shift=(shift_y, shift_x), axis=(0, 1))
+        blend_ratio = min(0.35, max(0.05, jitter_strength * 2.0))
+        rgba[:, :, :3][mask] = (
+            (1.0 - blend_ratio) * rgba[:, :, :3][mask] + blend_ratio * rolled[mask]
+        )
         jitter = np_rng.normal(0, 255.0 * jitter_strength, size=rgba[:, :, :3].shape)
         rgba[:, :, :3][mask] += jitter[mask]
     if brightness_noise > 0:
@@ -109,5 +116,6 @@ def _apply_watermark(
     for y in range(-step + offset_y, height + step, step):
         for x in range(-step + offset_x, width + step, step):
             draw.text((x, y), text, fill=color, font=font)
-    return Image.alpha_composite(image, overlay)
-
+    rotation = py_rng.uniform(-6.0, 6.0)
+    rotated_overlay = overlay.rotate(rotation, expand=False)
+    return Image.alpha_composite(image, rotated_overlay)
