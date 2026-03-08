@@ -72,6 +72,7 @@ def generate_batch(
     preset: str | None = None,
     config_path: str | Path | None = None,
     base_seed: int | None = None,
+    seed_strategy: str = "incremental",
     output_dir: str | Path = "outputs",
     output_format: str = "PNG",
 ) -> BatchResult:
@@ -84,7 +85,12 @@ def generate_batch(
     items: list[BatchItemResult] = []
 
     for idx, text in enumerate(texts):
-        item_seed = base + idx
+        if seed_strategy == "incremental":
+            item_seed = base + idx
+        elif seed_strategy == "random":
+            item_seed = random.SystemRandom().randint(1, 2**31 - 1)
+        else:
+            raise ValueError(f"Unknown seed_strategy: {seed_strategy}")
         output_path = out_dir / f"sample_{idx:04d}.{output_format.lower()}"
         result = generate(
             text,
